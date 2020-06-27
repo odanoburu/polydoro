@@ -5,7 +5,7 @@
 ;; Maintainer: bruno cuconato <bcclaro+emacs@gmail.com>
 ;; URL: https://github.com/odanoburu/
 ;; Version: 0.0.1
-;; Package-Requires: ((emacs "26")
+;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: extensions productivity
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -26,6 +26,7 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl-lib))
+(require 'timer)
 
 (defgroup polydoro nil
   "Customization options for polydoro's pomodoro timer."
@@ -53,7 +54,7 @@ pomodoro sessions. (Lengths are specified in seconds).
 
 If nil, the user will manage his rests manually, resting as long
 as they want and restarting the timer themselves."
-  :type (restricted-sexp :match-alternatives ('nil polydoro-pomodoro-config-p)))
+  :type '(restricted-sexp :match-alternatives ('nil polydoro-pomodoro-config-p)))
 
 (defcustom polydoro-running-lighter
   "🍅"
@@ -68,17 +69,27 @@ as they want and restarting the timer themselves."
 
 (defcustom polydoro-run-prefix-key
   [F9]
-  "Prefix key for running pomodoro timer.")
+  "Prefix key for running pomodoro timer."
+  :type 'key-sequence)
+
+(defcustom polydoro-running-multiple-choice
+  ;; TODO:
+  nil)
 
 (defcustom polydoro-idle-prefix-key
   [F9]
-  "Prefix key for idle pomodoro timer.")
+  "Prefix key for idle pomodoro timer."
+  :type 'key-sequence)
 
 (defcustom polydoro-hook
   nil
   "Functions to run when interacting with pomodoro timer.
 
-")
+Each function will be called with a symbol argument describing
+the event that is happening. The possible events are:
+"
+  :risky t
+  :type 'hook)
 
 
 (defun positive-p (integer)
@@ -98,7 +109,112 @@ as they want and restarting the timer themselves."
   (and (listp config)
        (positive-p (polydoro--pomodoros-per-session config))
        (positive-p (polydoro--short-rest config))
-       (postivie-p (polydoro--long-rest config))))
+       (positive-p (polydoro--long-rest config))))
+
+;;; state
+(defvar polydoro--current-pomodoro
+  nil
+  "Store the current pomodoro timer, if any.")
+
+(defvar polydoro--session-number
+  0
+  "The number of pomodoros already run in this session.")
+
+(defvar polydoro--paused-at
+  nil
+  "If non-nil, the time when the pomodoro was paused.
+
+Used to calculate when the pomodoro is over after resumed.")
+
+
+(defun polydoro--internal-hook (event)
+  (cl-case event
+    ((start session-start)
+     nil)
+    (pause
+     (setf polydoro--paused-at (current-time)))
+    (resume
+     (setf polydoro--paused-at nil))
+    (interrupt
+     ;; interrupting is pausing + setting polydoro--paused-at to nil
+     (setf polydoro--paused-at nil))
+    ((over session-over)
+     (setf polydoro--current-pomodoro nil))))
+
+(defun polydoro--run-hook (event)
+  "Call every function in `polydoro-hook' with argument EVENT."
+  (mapc (lambda (f) (funcall f event))
+	polydoro-hook)
+  ;; run internal (book-keeping) hook
+  (polydoro--internal-hook event))
+
+
+(defun polydoro-run ()
+  "Run pomodoro.
+
+Runs ‘polydoro-hook’ with the symbol ‘start’ or the symbol
+‘session-start’ as argument. When the pomodoro is over,
+‘polydoro-hook’ is called with the symbol ‘over’ or the symbol
+‘session-over’ as argument."
+  (interactive)
+  ;; run start hook
+  (let* ((first-in-session (= polydoro--session-number 0))
+	 (event (if first-in-session 'session-start 'start)))
+    (polydoro--run-hook event))
+  ;; set up timer
+  (let* ((last-in-session (>= (1+ polydoro--session-number) (polydoro--pomodoros-per-session)))
+	 (event (if last-in-session 'session-over 'over))
+	 (timer (run-at-time polydoro-pomodoro-length nil #'polydoro--run-hook event)))
+    (setf polydoro--current-pomodoro timer)))
+
+
+(defun polydoro-pause ()
+  "Pause the current pomodoro.
+
+Runs ‘polydoro-hook’ with the symbol ‘pause’ as argument."
+  (interactive)
+  (unless polydoro--current-pomodoro
+    (user-error "You are not in pomodoro"))
+  ;; this will set ‘polydoro--paused-at’ too:
+  (polydoro--run-hook 'pause)
+  (cancel-timer polydoro--current-pomodoro))
+
+
+(defun polydoro-resume ()
+  "Resume the current pomodoro.
+
+Runs ‘polydoro-hook’ with the symbol ‘resume’ as argument."
+  (interactive)
+  (unless (and polydoro--current-pomodoro
+	       polydoro--paused-at)
+    (user-error "Not in a paused pomodoro"))
+  (let* ((pause-time (time-subtract (current-time) polydoro--paused-at))
+	 (pause-duration (float-time pause-time)))
+    (timer-inc-time polydoro--current-pomodoro pause-duration))
+  ;; this will set ‘polydoro--paused-at’ to nil
+  (polydoro--run-hook 'resume)
+  (timer-activate polydoro--current-pomodoro))
+
+
+(defun polydoro-interrupt ()
+  "Interrupt the current pomodoro.
+
+Runs ‘polydoro-hook’ with the symbol ‘interrupt’ as argument"
+  (interactive)
+  ;; interrupting the same as pausing and then setting ‘polydoro--paused-at’
+  ;; to nil
+  (polydoro-pause)
+  ;; this sets ‘polydoro--paused-at’ to nil
+  (polydoro-run-hook 'interrupt))
+
+
+(defun polydoro-running-keymap ()
+  (let ((prefix-map (make-sparse-keymap))
+	(mode-map (make-sparse-keymap)))
+    (define-key prefix-map (kbd "p") _)
+    ;; bind minor to minor mode keymap and return it
+    (define-key mode-map polydoro-run-prefix-key prefix-map)
+    mode-map))
 
 
 (define-minor-mode polydoro-running-mode
@@ -106,10 +222,12 @@ as they want and restarting the timer themselves."
   nil
   polydoro-running-lighter)
 
+
 (define-minor-mode polydoro-idle-mode
   "TODO:"
   nil
   polydoro-idle-lighter
   :type 'string)
+
 
 (provide 'polydoro)
