@@ -12,21 +12,7 @@
   running out of a timer.
 
   We encourage you to run =M-x customize-group RET polydoro= as soon
-  as you install the package for the first time, or you may adapt the
-  following [[https://github.com/jwiegley/use-package][use-package]] declaration for your needs:
-
-  #+BEGIN_SRC elisp
-    (use-package polydoro
-      :bind ("C-c p" . polydoro) ; to call polydoro before activating polydoro-mode
-      :custom
-      (polydoro-pomodoro-rests nil)
-      (polydoro-command-key (kbd "C-c p"))
-      :hook ((polydoro-mode . polydoro-log)
-	     (polydoro-mode . polydoro-notify)))
-  #+END_SRC
-
-  (You still need to run =M-x customize-group RET polydoro= to know
-  which configuration options are available! Or just read the source!)
+  as you install the package for the first time.
 
 [[file:screenshots/modeline-inactive.png]]
 [[file:screenshots/modeline-running.png]]
@@ -99,6 +85,28 @@
    Drop this repository in your =load-path=, or symlink the files you
    you want there. I could add this to MELPA or ELPA too, I guess, but
    only if anyone else is using it besides me :P
+
+   The following use-package declaration might come in handy:
+   #+BEGIN_SRC elisp
+     (use-package polydoro
+       :bind ("C-c p" . polydoro)
+       ;; path to repository
+       :load-path "~/sites/polydoro/"
+       ;; require these extension packages (included in the repository)
+       :init
+       (use-package polydoro-log)
+       (use-package polydoro-notify)
+       ;; some customization
+       :custom
+       (polydoro-pomodoro-rests nil)
+       (polydoro-command-key (kbd "C-c p"))
+       :hook ((polydoro-mode . polydoro-log)
+	      (polydoro-mode . polydoro-notify)))
+   #+END_SRC
+
+  Don't forget to run =M-x customize-group RET polydoro= to know which
+  configuration options are available! Or just read the source :)
+
 
 ** Naming
 
