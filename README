@@ -17,7 +17,7 @@
 
   #+BEGIN_SRC elisp
     (use-package polydoro
-      :bind ("C-c p" . polydoro)
+      :bind ("C-c p" . polydoro) ; to call polydoro before activating polydoro-mode
       :custom
       (polydoro-pomodoro-rests nil)
       (polydoro-command-key (kbd "C-c p"))
@@ -64,6 +64,7 @@
    are also customizable (see the Customize page), although you'll
    need some Elisp knowledge to fully enjoy this feature.
 
+
 ** Example extensions
 
    =polydoro= is a one-file package implemented at =polydoro.el=. This
@@ -93,6 +94,12 @@
    =polydoro-mode-hook=.
 
 
+** Installation
+
+   Drop this repository in your =load-path=, or symlink the files you
+   you want there. I could add this to MELPA or ELPA too, I guess, but
+   only if anyone else is using it besides me :P
+
 ** Naming
 
    =polydoro= is a portmanteau of polymorphic and pomodoro. The idea
@@ -107,6 +114,7 @@
    Make sure your font supports the unicode characters =🍅 (TOMATO
    codepoint 127813)= and =⏲ (TIMER CLOCK codepoint 9202)= if you want
    to use the default lighters, else customize their values.
+
 
 ** TODO Features to be implemented
 
