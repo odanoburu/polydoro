@@ -3,7 +3,7 @@
 
 ;; Author: bruno cuconato <bcclaro+emacs@gmail.com>
 ;; Maintainer: bruno cuconato <bcclaro+emacs@gmail.com>
-;; URL: https://github.com/odanoburu/
+;; URL: https://github.com/odanoburu/polydoro
 ;; Version: 0.0.1
 ;; Package-Requires: ((emacs "26.1"))
 ;; Keywords: extensions productivity
@@ -47,7 +47,13 @@ See `polydoro-pomodoro-rests' for configuring pomodoro rests."
   (list
    :pomodoros-per-session 4
    :short-rest (* 60 5) :long-rest (* 60 30))
-  "Configuration for polydoro rests.
+  ;; TODO: implement code to honor this variable
+  "NOT IMPLEMENTED YET. Configuration for polydoro rests.
+
+Currently this variable has almost no effect — you must manage
+your rests manually. It's nothing hard to implement, but I
+haven't gotten to it yet (you can do so if you want!) Below is
+the description of the variable as if it were useful right now:
 
 If non-nil, `polydoro' will automatically manage pomodoros and
 their rests. The value must be a plist specifying how many
@@ -154,7 +160,8 @@ Used to calculate when the pomodoro is over after resumed.")
   (if-let ((spec (assq 'polydoro-mode minor-mode-alist))
 	   (new  (if active? polydoro-running-lighter polydoro-idle-lighter)))
       (setf (nth 1 spec) new)
-    (error "polydoro: broken invariant (sorry!)")))
+    (error "polydoro: broken invariant (sorry!)"))
+  (force-mode-line-update t))
 
 
 (defun polydoro--internal-hook (event)
@@ -315,6 +322,22 @@ pomodoro."
   :lighter polydoro-idle-lighter
   :keymap polydoro-keymap
   :global t)
+
+
+(defun polydoro--status ()
+  "Return and display remaining time in the current pomodoro."
+  (interactive)
+  (let ((running? (polydoro--running-p))
+	(paused? (polydoro--paused-p)))
+    (unless (or running? paused?)
+      (message "No pomodoro"))
+    (let* ((remaining-time (time-subtract (timer--time polydoro--current-pomodoro)
+					  (current-time)))
+	   (remaining-time (decode-time remaining-time))
+	   (minutes (nth 1 remaining-time))
+	   (seconds (nth 0 remaining-time)))
+      (message "Pomodoro is %s, %s minutes and %s seconds left"
+	       (if running? "running" "paused") minutes seconds))))
 
 
 (provide 'polydoro)
