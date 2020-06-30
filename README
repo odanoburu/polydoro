@@ -28,9 +28,17 @@
   (You still need to run =M-x customize-group RET polydoro= to know
   which configuration options are available! Or just read the source!)
 
-[[file:screenshots/modeline-inactive.png]]
-[[file:screenshots/modeline-running.png]]
-[[file:screenshots/notification.png]]
+  Pomodoro indicator in the mode-line (inactive):
+  
+    [[file:screenshots/modeline-inactive.png]]
+
+  Pomodoro indicator in the mode-line (running):
+  
+    [[file:screenshots/modeline-running.png]]
+
+  Pomodoro notification in GNOME desktop (see =polydoro-notify= extension):
+  
+    [[file:screenshots/notification.png]]
 
 ** Further Customization
 
