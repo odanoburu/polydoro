@@ -25,6 +25,7 @@
   "Write WHAT to ‘polydoro-log-file’."
   (write-region (format "[%s] %s\n" (current-time-string) what) nil polydoro-log-file t nil))
 
+;;;###autoload
 (defun polydoro-log (&optional event)
   "Log polydoro events to ‘polydoro-log-file’."
   (when event

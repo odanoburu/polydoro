@@ -1,34 +1,122 @@
 # -*- mode: org -*-
 * polydoro: simple and customizable pomodoro timer
 
-=polydoro= has two design goals: being simple so that you can read and
-understand the code in a few minutes without much concentration; and
-being customizable so that you can adapt it to your needs.
+  =polydoro= is a [[https://en.wikipedia.org/wiki/Pomodoro_Technique][pomodoro]] timer with two design goals: being simple
+  so that you can read and understand the code in a few minutes
+  without much concentration; and being customizable so that you can
+  adapt it to your needs.
 
-These two goals imply that this package is not meant to be used before
-some configuration. We do try to provide sensible defaults, but it is
-best if you customize at least how you are notified of the running out
-of a timer.
+  These two goals imply that this package is not meant to be used
+  before some configuration. We do try to provide sensible defaults,
+  but it is best if you customize at least how you are notified of the
+  running out of a timer.
 
-We encourage you to run =M-x customize-group RET polydoro= as soon as
-you install the package for the first time, or you may adapt the
-following [[https://github.com/jwiegley/use-package][use-package]] declaration for your needs:
+  We encourage you to run =M-x customize-group RET polydoro= as soon
+  as you install the package for the first time, or you may adapt the
+  following [[https://github.com/jwiegley/use-package][use-package]] declaration for your needs:
 
-#+BEGIN_SRC elisp
+  #+BEGIN_SRC elisp
+    (use-package polydoro
+      :bind ("C-c p" . polydoro)
+      :custom
+      (polydoro-pomodoro-rests nil)
+      (polydoro-command-key (kbd "C-c p"))
+      :hook ((polydoro-mode . polydoro-log)
+	     (polydoro-mode . polydoro-notify)))
+  #+END_SRC
 
-#+END_SRC
+  (You still need to run =M-x customize-group RET polydoro= to know
+  which configuration options are available! Or just read the source!)
+
+[[file:screenshots/modeline-inactive.png]]
+[[file:screenshots/modeline-runnning.png]]
+[[file:screenshots/notification.png]]
+
+** Further Customization
+
+   Besides basic customization like how long is pomodoro session and
+   how the user wants sessions and pauses be handled, we offer more
+   powerful configuration options, which are used to implement
+   extensions to the simple pomodoro timer. (We'll discuss these
+   extensions in the next session.)
+
+   We (ab)use the =polydoro-mode-hook= to call user-specified
+   functions whenever there is a =polydoro= event. (If you don't know
+   what Emacs hooks are, [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Hooks.html][check the manual]]!) Each one of this functions
+   is called with a distinct argument when:
+
+   | argument | event                    |
+   |----------+--------------------------|
+   | nil      | polydoro-mode is invoked |
+   | 'start   | pomodoro is started      |
+   | 'pause   | pomodoro is paused       |
+   | 'resume  | pomodoro is resumed      |
+   | 'cancel  | pomodoro is canceled     |
+   | 'over    | pomodoro is over         |
+
+   ='start= and ='over= may be ='session-start= and ='session-over= if
+   sessions configured to be on, and represent the start and finish of
+   a session of pomodoros.
+
+   When the pomodoro command is run and a timer is active, a different
+   menu is shown depending on whether the timer is running or
+   paused. What is shown in this menu and what commands are available
+   are also customizable (see the Customize page), although you'll
+   need some Elisp knowledge to fully enjoy this feature.
+
+** Example extensions
+
+   =polydoro= is a one-file package implemented at =polydoro.el=. This
+   repository also contains other Elisp source files which are
+   extensions to polydoro.
+
+   =polydoro-log= logs the pomodoro activity, producing data in a
+   human- and machine-readable format that you can analyse later if
+   you want. (It was also useful for debugging the initial versions of
+   the library!) To activate logging, you add the =polydoro-log=
+   function to =polydoro-mode-hook=, which can be done manually as
+   #+BEGIN_SRC elisp
+     (add-hook 'polydoro-mode-hook #'polydoro-log)
+   #+END_SRC
+   or as in the use-package declaration above.
+
+   =polydoro-notify= notifies the user that a pomodoro is over using
+   GUI pop-ups. Its implementation currently only works for systems
+   where the =notify-send= executable is available in the =PATH=,
+   which should be all [[https://www.freedesktop.org/][Free Desktop]]-compliant Linux
+   distributions. (Mac, Windows, and BSD patches are welcome!) To
+   activate this extension, follow the instructions for the
+   =polydoro-log= extension.
+
+   Both =polydoro-log= and =polydoro-notify= serve as examples of how
+   to write a function suitable to be a member of
+   =polydoro-mode-hook=.
+
 
 ** Naming
 
-=polydoro= is a portmanteau of polymorphic and pomodoro. The idea is
-that =polydoro= is polymorphic because of the many forms it can take
-depending on user configuration. (=Polydoro/Polydorus= is also a Greek
-name, but I don't really recall all the myth characters with that
-name.)
+   =polydoro= is a portmanteau of polymorphic and pomodoro. The idea
+   is that =polydoro= is polymorphic because of the many forms it can
+   take depending on user configuration. (=Polydoro/Polydorus= is also
+   a Greek name, but I don't really recall all the myth characters
+   with that name.)
 
 
 ** Troubleshooting
 
-make sure your font supports the unicode characters =🍅 (TOMATO
-codepoint 127813)= and =⏲ (TIMER CLOCK codepoint 9202)= if you want to
-use the default lighters.
+   Make sure your font supports the unicode characters =🍅 (TOMATO
+   codepoint 127813)= and =⏲ (TIMER CLOCK codepoint 9202)= if you want
+   to use the default lighters, else customize their values.
+
+** TODO Features to be implemented
+
+   Since the goal of =polydoro= is to be easily extensible (although
+   this is yet to be tested in practice!), there is not much more to
+   implement (I think! feel free to open an issue if there's a feature
+   you want and you are not sure if it can be implemented using the
+   current extensibility features.)
+
+   One thing missing though is to honor the =polydoro-pomodoro-rests=
+   variable. Because I don't really like to have my rests
+   automatically managed, I don't use this feature, and because I
+   don't use this feature, I haven't implemented it (yet?)
